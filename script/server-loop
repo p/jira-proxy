@@ -1,0 +1,20 @@
+#!/bin/sh
+
+server=`echo "$0" |sed -e s/server-loop/server/`
+if [ "$0" = "$server" ]; then
+	echo "Problem in server-loop logic results in an infinite loop" 1>&2
+	exit 4
+fi
+
+while true; do
+	"$server"
+	code="$?"
+	# return codes:
+	# 127 ctrl-c
+	# 143 sigterm
+	if test "$code" = 1 || test "$code" = 127 ; then
+		sleep 5
+	elif test "$code" = 70 || test "$code" = 143 || test "$code" = 0 ; then
+		break
+	fi
+done

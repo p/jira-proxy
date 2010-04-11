@@ -1,0 +1,9 @@
+[global]
+#server.thread_pool = 1
+server.socket_host = '0.0.0.0'
+server.socket_port = 8001
+#debug.http_requests = True
+remote.host = 'tracker.phpbb.com'
+
+[/]
+#tools.encode.on = True
