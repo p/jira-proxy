@@ -121,7 +121,7 @@ class CachingProxy(Proxy):
                 return content
     
     def _save_to_cache(self, response):
-        if self.cache_absolute_path is None:
+        if self.cache_absolute_path is None or response.code is not None:
             return
         
         headers = response.headers
