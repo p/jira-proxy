@@ -7,6 +7,8 @@ remote.host = 'tracker.phpbb.com'
 #remote.user_agent = 'jira-proxy (via python urllib)'
 local.cache.dir = '/var/cache/issues'
 local.cache.enabled = True
+local.cache.x_accel_redirect.enabled = True
+local.cache.x_accel_redirect.prefix = '/internal'
 
 [/]
 #tools.encode.on = True

@@ -76,6 +76,9 @@ class CachingProxy(Proxy):
             if response.public:
                 self._save_to_cache(response)
         else:
+            # small hack for x-accel-redirect support
+            if content is True:
+                content = None
             response = ContentWrapper(content)
         return response
     
@@ -90,6 +93,7 @@ class CachingProxy(Proxy):
         if relative_path.find('..') >= 0:
             raise ValueError('Suspicious request relative path: %s' % relative_path)
         assert relative_path[0] == '/'
+        self.cache_relative_path = relative_path
         relative_path = relative_path[1:]
         if relative_path:
             assert relative_path[0] != '/'
@@ -104,7 +108,11 @@ class CachingProxy(Proxy):
             if expires >= now:
                 for key, value in headers.items():
                     cherrypy.response.headers[key] = value
-                content = tools.file.read(self.cache_absolute_path)
+                if cherrypy.config.get('local.cache.x_accel_redirect.enabled'):
+                    cherrypy.response.headers['x-accel-redirect'] = cherrypy.config['local.cache.x_accel_redirect.prefix'] + self.cache_relative_path
+                    content = True
+                else:
+                    content = tools.file.read(self.cache_absolute_path)
                 return content
     
     def _save_to_cache(self, response):
