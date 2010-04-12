@@ -59,7 +59,8 @@ class Proxy(BaseProxy):
     def _adjust_host_in_links(self):
         r = self._remote_response
         
-        if r.headers['content-type'].lower().startswith('text/html'):
+        content_type = r.headers['content-type'].lower()
+        if content_type.startswith('text/html') or content_type.startswith('application/xml'):
             content = r.content
             content = self.html_comment_re.sub('', content)
             search = cherrypy.config['remote.host']
