@@ -54,16 +54,6 @@ class Proxy(BaseProxy):
             content = content.replace(search, replace)
             #content = self.html_script_re.sub(lambda match: match.group(0).replace(search, replace), content)
             r.content = content
-        
-        return
-        try:
-            del r.headers['cache-control']
-        except:
-            pass
-        try:
-            del r.headers['expires']
-        except:
-            pass
 
 class ContentWrapper:
     def __init__(self, content):
