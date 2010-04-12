@@ -4,7 +4,12 @@ from base_proxy import BaseProxy
 import tools.hashlib_shortcuts, tools.file
 
 def expires_to_timestamp(expires):
-    return calendar.timegm(time.strptime(expires, '%a, %d %b %Y %H:%M:%S %Z'))
+    try:
+        # Expires: 0
+        int(expires)
+        return time.time()-86400
+    except:
+        return calendar.timegm(time.strptime(expires, '%a, %d %b %Y %H:%M:%S %Z'))
 
 class Proxy(BaseProxy):
     default_remote_host = cherrypy.config['remote.host']
