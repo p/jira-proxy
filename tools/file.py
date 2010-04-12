@@ -6,47 +6,45 @@ def read(path):
     with open(path) as f:
         return f.read()
 
-def _generate_temporary_path(path):
-    import tempfile
-    
-    # todo: fd is an open file descriptor, but tmp_path will be opened again later
-    fd, tmp_path = tempfile.mkstemp(prefix=path+'.tmp.')
-    return tmp_path
-
 def safe_write(path, content):
     '''Writes content to a temporary file in path's directory,
     then atomically renames temporary file to path'''
     
-    tmp_path = _generate_temporary_path(path)
+    import tempfile, contextlib
+    
+    fd, tmp_path = tempfile.mkstemp(prefix=path+'.tmp.')
     try:
-        with open(tmp_path, 'w') as f:
+        # calling close() on file object opened with os.fdopen closes the file descriptor
+        with contextlib.closing(os.fdopen(fd, 'w')) as f:
             f.write(content)
-        os.rename(tmp_path, path)
     except:
         # use a separate function to create a new scope,
         # so that we can reraise original exception without holding on to backtrace object.
         # http://docs.python.org/library/sys.html#sys.exc_info
         safe_unlink(tmp_path)
         raise
+    os.rename(tmp_path, path)
 
 def safe_write_gzip(path, content):
     '''Writes content compressed with gzip to a temporary file in path's directory,
     then atomically renames temporary file to path'''
     
-    import gzip, contextlib
+    import tempfile, gzip, contextlib
     
-    tmp_path = _generate_temporary_path(path)
+    fd, tmp_path = tempfile.mkstemp(prefix=path+'.tmp.')
     try:
-        # gzip.open defaults to compresslevel 9, but specify it explicitly in case default changes
-        with contextlib.closing(gzip.open(tmp_path, 'w', 9)) as f:
-            f.write(content)
-            os.rename(tmp_path, path)
+        # calling close() on file object opened with os.fdopen closes the file descriptor
+        with contextlib.closing(os.fdopen(fd, 'w')) as f:
+            # gzip.open defaults to compresslevel 9, but specify it explicitly in case default changes
+            with contextlib.closing(gzip.GzipFile(fileobj=f, mode='w', compresslevel=9)) as gz:
+                gz.write(content)
     except:
         # use a separate function to create a new scope,
         # so that we can reraise original exception without holding on to backtrace object.
         # http://docs.python.org/library/sys.html#sys.exc_info
         safe_unlink(tmp_path)
         raise
+    os.rename(tmp_path, path)
 
 def safe_unlink(path):
     '''Unlinks path, suppressing any exceptions'''
