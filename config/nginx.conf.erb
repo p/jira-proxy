@@ -1,0 +1,83 @@
+<%
+    system_config_dir = '/usr/local/etc/nginx'
+    log_dir = '/tmp/nginx/log'
+    state_dir = '/tmp/nginx/state'
+%>
+
+#user  www;
+worker_processes  1;
+
+error_log <%= log_dir %>/error.log;
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+
+#pid        logs/nginx.pid;
+pid <%= state_dir %>/nginx.pid;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       <%= system_config_dir %>/mime.types;
+    default_type  application/octet-stream;
+
+    #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+    #                  '"$status" $body_bytes_sent "$http_referer" '
+    #                  '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log <%= log_dir %>/access.log;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    #keepalive_timeout  0;
+    keepalive_timeout  65;
+
+    #gzip  on;
+
+    server {
+        listen 8010;
+        server_name tip;
+
+        location / {
+            root /var/empty;
+            proxy_pass http://proxy_dev;
+            proxy_set_header Host $http_host;
+        }
+        
+        location /internal/ {
+            internal;
+            alias /var/cache/issues/;
+        }
+    }
+    
+    server {
+        listen 8011;
+        server_name tip;
+        
+        location / {
+            root /var/empty;
+            fastcgi_pass unix://proxy_fcgi;
+            include <%= system_config_dir %>/fastcgi.conf;
+        }
+        
+        location /internal/ {
+            internal;
+            alias /var/cache/issues/;
+        }
+    }
+
+    upstream proxy_dev {
+        server 127.0.0.1:8001;
+    }
+
+    upstream proxy_fcgi {
+        server unix:/tmp/jira-proxy.sock;
+    }
+
+    client_body_temp_path <%= state_dir %>/client_body;
+    proxy_temp_path <%= state_dir %>/proxy;
+    fastcgi_temp_path <%= state_dir %>/fastcgi;
+}

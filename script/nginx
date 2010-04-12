@@ -1,0 +1,91 @@
+#!/bin/sh
+
+cmd=${1:-start}
+
+root=$(realpath `dirname $0`/..)
+pidfile=/tmp/nginx/state/nginx.pid
+
+do_start() {
+	erb <"$root"/config/nginx.conf.erb >"$root"/config/nginx.conf &&
+	mkdir -p /tmp/nginx/log /tmp/nginx/state &&
+	nginx -c "$root"/config/nginx.conf
+}
+
+do_stop() {
+	if is_running; then
+		kill `cat $pidfile`
+	else
+		echo "nginx is not running" 1>&2
+	fi
+	return 1
+}
+
+do_reload() {
+	if is_running; then
+		kill -HUP `cat $pidfile`
+	else
+		echo "nginx is not running" 1>&2
+	fi
+	return 1
+}
+
+is_running() {
+	status=1
+	if test -e $pidfile; then
+		pid=`cat $pidfile`
+		if kill -0 $pid && ps ax |grep $pid |grep -q nginx; then
+			status=0
+		fi
+	fi
+	return $status
+}
+
+do_status() {
+	if is_running; then
+		echo "nginx is running as pid `cat $pidfile`"
+	else
+		echo "nginx is not running"
+	fi
+}
+
+wait_stop() {
+	t=10
+	while is_running; do
+		t=`expr $t - 1`
+		if test `expr $t \< 0` = 1; then
+			break
+		fi
+		sleep 1
+	done
+	if is_running; then
+		echo "nginx is still running" 1>&2
+	fi
+}
+
+case "$cmd" in
+	start)
+		do_start
+		;;
+	stop)
+		if do_stop; then
+			wait_stop
+		fi
+		;;
+	restart)
+		if do_stop; then
+			wait_stop
+		fi
+		do_start
+		;;
+	reload)
+		do_reload
+		;;
+	status)
+		do_status
+		;;
+	*)
+		echo "Unrecognized command: $cmd" 1>&2
+		echo "Valid commands: start|stop|restart|reload|status" 1>&2
+		exit 2
+		;;
+esac
