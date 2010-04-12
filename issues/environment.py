@@ -27,6 +27,9 @@ def get_proxy():
     except AttributeError:
         import proxy as proxy_module
         
-        proxy = proxy_module.Proxy()
-        _thread_local_data.proxy = proxy
+        if cherrypy.config['local.cache.enabled']:
+            cls = proxy_module.CachingProxy
+        else:
+            cls = proxy_module.Proxy
+        _thread_local_data.proxy = proxy = cls()
     return proxy

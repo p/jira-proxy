@@ -5,6 +5,8 @@ server.socket_port = 8001
 #debug.http_requests = True
 remote.host = 'tracker.phpbb.com'
 #remote.user-agent = 'jira-proxy (via python urllib)'
+local.cache.dir = '/var/cache/issues'
+local.cache.enabled = True
 
 [/]
 #tools.encode.on = True
