@@ -1,2 +1,3 @@
+config/fastcgi.ini
 config/main.ini
 config/nginx.conf
