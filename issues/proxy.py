@@ -3,6 +3,9 @@ import cherrypy, re, os.path, cPickle as pickle, time, calendar
 from base_proxy import BaseProxy
 import tools.hashlib_shortcuts, tools.file
 
+def expires_to_timestamp(expires):
+    return calendar.timegm(time.strptime(expires, '%a, %d %b %Y %H:%M:%S %Z'))
+
 class Proxy(BaseProxy):
     default_remote_host = cherrypy.config['remote.host']
     
@@ -19,32 +22,37 @@ class Proxy(BaseProxy):
     def perform(self, **kwargs):
         BaseProxy.perform(self, **kwargs)
         
-        self._massage_remote_response()
+        self._adjust_cache_directives()
+        self._adjust_host_in_links()
     
-    def _massage_remote_response(self):
+    def _adjust_cache_directives(self):
         r = self._remote_response
         
-        # kill no-cache and no-store directives, but note whether response was private or not.
-        # private responses are not saved to disk later
-        r.private = False
+        # kill no-cache and no-store directives.
+        # note whether response was marked public; only public responses are saved to disk
+        r.public = False
         if r.headers.has_key('pragma'):
             value = r.headers['pragma']
+            # xxx hack: multiple pragmas are theoretically possible, but unlikely
             if value == 'no-cache':
                 del r.headers['pragma']
-                r.private = True
         if r.headers.has_key('cache-control'):
             value = r.headers['cache-control']
             parts = [part.strip() for part in value.split(',')]
             new_parts = [part for part in parts if part not in ['no-cache', 'no-store']]
             if len(parts) != len(new_parts):
-                if 'private' not in new_parts:
-                    new_parts.append('private')
                 new_value = ', '.join(new_parts)
                 r.headers['cache-control'] = new_value
-                r.private = True
-        # quick hack: kill old expiration dates from private responses, without parsing dates
-        if r.private and r.headers.has_key('expires'):
-            del r.headers['expires']
+            if 'public' in new_parts:
+                r.public = True
+        # kill past expiration dates
+        if r.headers.has_key('expires'):
+            expires_at = expires_to_timestamp(r.headers['expires'])
+            if expires_at < time.time():
+                del r.headers['expires']
+        
+    def _adjust_host_in_links(self):
+        r = self._remote_response
         
         if r.headers['content-type'].lower().startswith('text/html'):
             content = r.content
@@ -114,7 +122,7 @@ class CachingProxy(Proxy):
                     expires_at = int(time.time()) + age
                     break
         if expires_at is None and headers.has_key('expires'):
-            expires_at = calendar.timegm(time.strptime(headers['expires'], '%a, %d %b %Y %H:%M:%S %Z'))
+            expires_at = expires_to_timestamp(headers['expires'])
         if expires_at is not None:
             headers['x-expires-timestamp'] = expires_at
             dir = os.path.dirname(self.cache_absolute_path)
