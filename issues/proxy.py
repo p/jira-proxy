@@ -25,12 +25,12 @@ class Proxy(BaseProxy):
         
         # kill no-cache and no-store directives, but note whether response was private or not.
         # private responses are not saved to disk later
-        private = False
+        r.private = False
         if r.headers.has_key('pragma'):
             value = r.headers['pragma']
             if value == 'no-cache':
                 del r.headers['pragma']
-                private = True
+                r.private = True
         if r.headers.has_key('cache-control'):
             value = r.headers['cache-control']
             parts = [part.strip() for part in value.split(',')]
@@ -40,9 +40,9 @@ class Proxy(BaseProxy):
                     new_parts.append('private')
                 new_value = ', '.join(new_parts)
                 r.headers['cache-control'] = new_value
-                private = True
+                r.private = True
         # quick hack: kill old expiration dates from private responses, without parsing dates
-        if private and r.headers.has_key('expires'):
+        if r.private and r.headers.has_key('expires'):
             del r.headers['expires']
         
         if r.headers['content-type'].lower().startswith('text/html'):
