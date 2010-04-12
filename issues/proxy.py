@@ -73,7 +73,7 @@ class CachingProxy(Proxy):
         content = self._find_in_cache()
         if content is None:
             response = Proxy.perform_and_propagate(self, **kwargs)
-            if not response.private:
+            if response.public:
                 self._save_to_cache(response)
         else:
             response = ContentWrapper(content)
