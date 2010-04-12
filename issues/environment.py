@@ -1,19 +1,27 @@
 import cherrypy, os.path, threading
 
 _thread_local_data = threading.local()
+fs_root = None
 
-def compute_config_path(root):
-    config_path = os.path.join(root, 'config', 'main.ini')
+def compute_config_path(config_file):
+    config_path = os.path.join(fs_root, 'config', config_file)
     return config_path
 
 def load_config(root):
-    config_path = compute_config_path(root)
+    global fs_root
+    fs_root = root
+    add_config('main.ini')
+
+def add_config(config_file):
+    config_path = compute_config_path(config_file)
     if os.path.exists(config_path):
         cherrypy.config.update(config_path)
 
 def setup(root):
+    global fs_root
+    fs_root = root
     import main_controller
-    config_path = compute_config_path(root)
+    config_path = compute_config_path('main.ini')
     kwargs = dict()
     if os.path.exists(config_path):
         kwargs['config'] = config_path

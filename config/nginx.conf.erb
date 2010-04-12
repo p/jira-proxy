@@ -59,8 +59,8 @@ http {
         
         location / {
             root /var/empty;
-            fastcgi_pass unix://proxy_fcgi;
-            include <%= system_config_dir %>/fastcgi.conf;
+            fastcgi_pass unix:/tmp/issues.sock;
+            include nginx.fastcgi_params.conf;
         }
         
         location /internal/ {
@@ -74,7 +74,7 @@ http {
     }
 
     upstream proxy_fcgi {
-        server unix:/tmp/jira-proxy.sock;
+        server unix:/tmp/issues.sock;
     }
 
     client_body_temp_path <%= state_dir %>/client_body;
