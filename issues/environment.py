@@ -26,6 +26,8 @@ def setup(root):
     if os.path.exists(config_path):
         kwargs['config'] = config_path
     cherrypy.tree.mount(main_controller.MainController(), '/', **kwargs)
+    # import during setup
+    import proxy
 
 def get_proxy():
     global _thread_local_data
