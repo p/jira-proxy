@@ -37,6 +37,9 @@ class BaseProxy:
         handlers.append(urlgrabber.keepalive.HTTPHandler())
         handlers.append(self.__class__.NoRedirectHandler())
         self._opener = urllib2.build_opener(*handlers)
+        user_agent = cherrypy.config.get('remote.user-agent')
+        if user_agent:
+            self._opener.addheaders = [('user-agent', user_agent)]
     
     def perform(self, **kwargs):
         self._collect_request_parameters(**kwargs)
