@@ -17,6 +17,8 @@ def safe_write(path, content):
         # calling close() on file object opened with os.fdopen closes the file descriptor
         with contextlib.closing(os.fdopen(fd, 'w')) as f:
             f.write(content)
+            # mkstemp creates files with 600 permissions
+            os.fchmod(fd, 0666 & ~get_umask())
     except:
         # use a separate function to create a new scope,
         # so that we can reraise original exception without holding on to backtrace object.
@@ -38,6 +40,8 @@ def safe_write_gzip(path, content):
             # gzip.open defaults to compresslevel 9, but specify it explicitly in case default changes
             with contextlib.closing(gzip.GzipFile(fileobj=f, mode='w', compresslevel=9)) as gz:
                 gz.write(content)
+            # mkstemp creates files with 600 permissions
+            os.fchmod(fd, 0666 & ~get_umask())
     except:
         # use a separate function to create a new scope,
         # so that we can reraise original exception without holding on to backtrace object.
@@ -74,3 +78,9 @@ def safe_mkdirs(path):
             os.makedirs(path)
     finally:
         _mkdirs_lock.release()
+
+def get_umask():
+    # python does not provide a way to just read umask apparently
+    umask = os.umask(0777)
+    os.umask(umask)
+    return umask
