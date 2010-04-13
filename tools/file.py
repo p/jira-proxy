@@ -79,8 +79,40 @@ def safe_mkdirs(path):
     finally:
         _mkdirs_lock.release()
 
+_last_umask = 0777
+_umask_lock = None
+
 def get_umask():
-    # python does not provide a way to just read umask apparently
-    umask = os.umask(0777)
-    os.umask(umask)
-    return umask
+    '''Retrieves current umask.
+    
+    Care is taken to be thread-friendly, but due to umask system call changing umask
+    files created in other threads (native code?) while this function runs could get wrong umask.
+    
+    A safe way to use get_umask to retrieve umask that is not changed during process lifetime
+    is as follows:
+    
+    1. When the process is initializing, and is single-threaded, call get_umask to setup
+    umask cache.
+    
+    2. As long as umask is not changed, future get_umask calls are guaranteed to not actually
+    alter umask.
+    
+    get_umask temporarily sets umask to 777 on the first call, and on subsequent calls to
+    the value returned by the previous call.
+    '''
+    
+    global _last_umask, _umask_lock
+    
+    if _umask_lock is None:
+        import threading
+        
+        _umask_lock = threading.Lock()
+    
+    _umask_lock.acquire()
+    try:
+        _last_umask = os.umask(_last_umask)
+        os.umask(_last_umask)
+    finally:
+        _umask_lock.release()
+    
+    return _last_umask
