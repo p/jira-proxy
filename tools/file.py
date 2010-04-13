@@ -79,14 +79,11 @@ def safe_mkdirs(path):
             if e.errno != errno.EEXIST:
                 raise
             
-            # str(e) for EEXIST is something like this:
-            # OSError: [Errno 17] File exists: 't/3/7'
-            # abort as soon as the same path errors twice
-            message = str(e)
-            if last_message == message:
-                raise
-            last_message = message
-            
+            # makedirs silences EEXIST errors for parent paths of path,
+            # but propagates EEXIST errors for path itself.
+            # we are not going to rely on this fact, although as long as
+            # it holds we are guaranteed to break on the second iteration
+            # in the worst case.
             # impose a limit on the number of iterations
             # in case something strange is going on
             retries -= 1
