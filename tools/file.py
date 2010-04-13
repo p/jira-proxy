@@ -59,25 +59,43 @@ def safe_unlink(path):
         # ignore to propagate original exception
         pass
 
-_mkdirs_lock = None
-
 def safe_mkdirs(path):
     '''Creates directories up to and including path,
-    ensuring that two threads do not attempt to create these directories simultaneously'''
+    accounting for the possibility that another thread or process may be
+    simultaneously attempting to create some of these directories'''
     
-    global _mkdirs_lock
-    
-    if _mkdirs_lock is None:
-        import threading
-        
-        _mkdirs_lock = threading.Lock()
-    
-    _mkdirs_lock.acquire()
-    try:
-        if not os.path.exists(path):
-            os.makedirs(path)
-    finally:
-        _mkdirs_lock.release()
+    last_message = None
+    retries = 5
+    while True:
+        try:
+            if not os.path.exists(path):
+                os.makedirs(path)
+            break
+        except OSError, e:
+            import errno
+            
+            # immediately bail on everything but possible
+            # concurrency errors
+            if e.errno != errno.EEXIST:
+                raise
+            
+            # str(e) for EEXIST is something like this:
+            # OSError: [Errno 17] File exists: 't/3/7'
+            # abort as soon as the same path errors twice
+            message = str(e)
+            if last_message == message:
+                raise
+            last_message = message
+            
+            # impose a limit on the number of iterations
+            # in case something strange is going on
+            retries -= 1
+            if retries <= 0:
+                raise
+            
+            # if we made it this far we'll try creating the path again,
+            # on the assumption that another process beat us to some
+            # or all required directories
 
 _last_umask = 0777
 _umask_lock = None
