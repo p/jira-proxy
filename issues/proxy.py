@@ -18,6 +18,8 @@ class Proxy(BaseProxy):
         cherrypy.config['remote.host']: '',
     }
     
+    adjust_host_in_content_types = ('text/html', 'application/xml', 'application/json')
+    
     def __init__(self):
         BaseProxy.__init__(self)
         
@@ -60,14 +62,16 @@ class Proxy(BaseProxy):
         r = self._remote_response
         
         content_type = r.headers['content-type'].lower()
-        if content_type.startswith('text/html') or content_type.startswith('application/xml'):
-            content = r.content
-            content = self.html_comment_re.sub('', content)
-            search = cherrypy.config['remote.host']
-            replace = cherrypy.request.headers.get('host') or self.__class__.default_remote_host
-            content = content.replace(search, replace)
-            #content = self.html_script_re.sub(lambda match: match.group(0).replace(search, replace), content)
-            r.content = content
+        for check in self.__class__.adjust_host_in_content_types:
+            if content_type.startswith(check):
+                content = r.content
+                content = self.html_comment_re.sub('', content)
+                search = cherrypy.config['remote.host']
+                replace = cherrypy.request.headers.get('host') or self.__class__.default_remote_host
+                content = content.replace(search, replace)
+                #content = self.html_script_re.sub(lambda match: match.group(0).replace(search, replace), content)
+                r.content = content
+                break
 
 class ContentWrapper:
     def __init__(self, content):
