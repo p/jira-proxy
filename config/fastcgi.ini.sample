@@ -1,3 +1,5 @@
 [global]
 server.socket_file = '/tmp/issues.sock'
 engine.autoreload_on = False
+local.cache.x_accel_redirect.enabled = True
+local.cache.x_accel_redirect.prefix = '/internal'
