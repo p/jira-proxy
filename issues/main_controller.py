@@ -27,3 +27,11 @@ class MainController:
             if value.startswith(search):
                 value = replace + value[len(search):]
                 params[key] = value
+    
+    # Googlebot gets its nose in everywhere.
+    # Save us the aggravation of putting up with it.
+    # We don't have any original content anyway.
+    @cherrypy.expose
+    def robots_txt(self):
+        cherrypy.response.headers['content-type'] = 'text/plain'
+        return "User-Agent: *\nDisallow: /\n"
