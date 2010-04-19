@@ -25,7 +25,6 @@ class MainController:
             if value.startswith(search):
                 value = replace + value[len(search):]
                 params[key] = value
-        print params
     
     def _munge_params(self):
         self._replace_host(cherrypy.request.headers['host'], cherrypy.config['remote.host'])
