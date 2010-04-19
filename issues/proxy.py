@@ -66,9 +66,13 @@ class Proxy(BaseProxy):
             if content_type.startswith(check):
                 content = r.content
                 content = self.html_comment_re.sub('', content)
+                local_host = cherrypy.config.get('local.host')
+                incoming_host = cherrypy.request.headers.get('host')
                 search = cherrypy.config['remote.host']
-                replace = cherrypy.config.get('local.host') or cherrypy.request.headers.get('host') or self.__class__.default_remote_host
+                replace = local_host or incoming_host or self.__class__.default_remote_host
                 content = content.replace(search, replace)
+                if local_host:
+                    content = content.replace(incoming_host, local_host)
                 #content = self.html_script_re.sub(lambda match: match.group(0).replace(search, replace), content)
                 r.content = content
                 break

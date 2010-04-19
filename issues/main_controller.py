@@ -16,17 +16,22 @@ class MainController:
         response = self._proxy(**kwargs)
         return response.content
     
-    def _munge_params(self):
+    def _replace_host(self, search_host, replace_host):
         params = cherrypy.request.params
-        proxy_host = cherrypy.config.get('local.host') or cherrypy.request.headers['host']
-        remote_host = cherrypy.config['remote.host']
         prefix = 'http://'
-        search = prefix + proxy_host
-        replace = prefix + remote_host
+        search = prefix + search_host
+        replace = prefix + replace_host
         for key, value in params.items():
             if value.startswith(search):
                 value = replace + value[len(search):]
                 params[key] = value
+        print params
+    
+    def _munge_params(self):
+        self._replace_host(cherrypy.request.headers['host'], cherrypy.config['remote.host'])
+        local_host = cherrypy.config.get('local.host')
+        if local_host:
+            self._replace_host(local_host, cherrypy.config['remote.host'])
     
     # Googlebot gets its nose in everywhere.
     # Save us the aggravation of putting up with it.
