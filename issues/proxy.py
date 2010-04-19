@@ -67,7 +67,7 @@ class Proxy(BaseProxy):
                 content = r.content
                 content = self.html_comment_re.sub('', content)
                 search = cherrypy.config['remote.host']
-                replace = cherrypy.request.headers.get('host') or self.__class__.default_remote_host
+                replace = cherrypy.config.get('local.host') or cherrypy.request.headers.get('host') or self.__class__.default_remote_host
                 content = content.replace(search, replace)
                 #content = self.html_script_re.sub(lambda match: match.group(0).replace(search, replace), content)
                 r.content = content
