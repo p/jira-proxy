@@ -18,7 +18,7 @@ class MainController:
     
     def _munge_params(self):
         params = cherrypy.request.params
-        proxy_host = cherrypy.request.headers['host']
+        proxy_host = cherrypy.config.get('local.host') or cherrypy.request.headers['host']
         remote_host = cherrypy.config['remote.host']
         prefix = 'http://'
         search = prefix + proxy_host
