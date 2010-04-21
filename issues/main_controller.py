@@ -39,3 +39,9 @@ class MainController:
     def robots_txt(self):
         cherrypy.response.headers['content-type'] = 'text/plain'
         return "User-Agent: *\nDisallow: /\n"
+    
+    # We rewrite some useless urls to blank_page on varnish
+    @cherrypy.expose
+    def blank_page(self):
+        cherrypy.response.headers['content-type'] = 'text/plain'
+        return None
