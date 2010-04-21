@@ -42,6 +42,6 @@ class MainController:
     
     # We rewrite some useless urls to blank_page on varnish
     @cherrypy.expose
-    def blank_page(self):
+    def blank_page(self, *args, **kwargs):
         cherrypy.response.headers['content-type'] = 'text/plain'
         return None
