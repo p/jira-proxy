@@ -22,7 +22,8 @@ class MainController:
         search = prefix + search_host
         replace = prefix + replace_host
         for key, value in params.items():
-            if value.startswith(search):
+            # todo: check if non-strings contain host
+            if isinstance(value, basestring) and value.startswith(search):
                 value = replace + value[len(search):]
                 params[key] = value
     
