@@ -102,11 +102,10 @@ class BaseProxy:
     def _issue_remote_request(self):
         try:
             response = self._opener.open(self._remote_request)
-            response_code = None
         except urllib2.HTTPError, e:
             response = e
-            response_code = e.code
         
+        response_code = response.code
         self._remote_response = self.__class__.ResponseClass(params=self._params, code=response_code, content=response.read(), raw_response=response)
         
         remote_info = response.info()
