@@ -64,6 +64,10 @@ class Proxy(BaseProxy):
     def _adjust_host_in_links(self):
         r = self._remote_response
         
+        # post responses have no content type, thus nothing to adjust
+        if not r.headers.has_key('content-type'):
+            return
+        
         content_type = r.headers['content-type'].lower()
         for check in self.__class__.adjust_host_in_content_types:
             if content_type.startswith(check):
