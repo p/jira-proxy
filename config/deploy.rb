@@ -23,7 +23,7 @@ namespace :deploy do
   
   task :finalize_update do
     run <<-CMD
-      for file in main.ini fastcgi.ini; do
+      for file in main.ini production.ini; do
         ln -s #{shared_path}/config/$file #{release_path}/config;
       done
     CMD
