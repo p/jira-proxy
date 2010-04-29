@@ -25,6 +25,9 @@ class Proxy(BaseProxy):
         
         self.html_comment_re = re.compile(r'<!--.*?-->', re.S)
         self.html_script_re = re.compile(r'<script.*?</script>', re.S)
+        
+        # note: we use re.match which requires match from beginning
+        self.public_paths_re = re.compile(r'/(s/|images/|favicon\.ico|rest/api/1\.0/(header-separator|dropdowns)($|\?))')
     
     def perform(self, **kwargs):
         BaseProxy.perform(self, **kwargs)
@@ -76,6 +79,86 @@ class Proxy(BaseProxy):
                 #content = self.html_script_re.sub(lambda match: match.group(0).replace(search, replace), content)
                 r.content = content
                 break
+    
+    def _collect_request_parameters(self, **kwargs):
+        BaseProxy._collect_request_parameters(self, **kwargs)
+        
+        # jira puts hostname into self-referential links, and hostname comes from jira configuration.
+        # in case of jira proxy-served pages, that hostname is wrong.
+        # this means an http accelerator like varnish which does not edit response bodies
+        # cannot serve usable pages when running on any host other than configured jira host.
+        # in turn this means jira proxy must always be involved in proxying process.
+        # running an accelerator on top of jira-proxy makes latency even worse, so to maintain
+        # some semblance of sanity we have to do all transformations that varnish does.
+        self._adjust_request()
+    
+    # header adjustments from varnish
+    def _adjust_request(self):
+        if self.public_paths_re.match(self._params.path):
+            self._params.clear_cookies()
+    
+    def _issue_remote_request(self):
+        BaseProxy._issue_remote_request(self)
+        
+        # see note in _collect_request_parameters.
+        # do what should be done in varnish
+        self._adjust_response()
+    
+    # header adjustments from varnish
+    def _adjust_response(self):
+        if self.public_paths_re.match(self._params.path):
+            self._remote_response.clear_cookies()
+            self._make_response_public()
+            # be aggressive here since we don't get much traffic
+            self._force_min_expiration(86400)
+    
+    def _make_response_public(self):
+        h = self._remote_response.headers
+        if h.has_key('cache-control'):
+            cache_control = [part.strip() for part in h['cache-control'].split(',')]
+            if 'private' in cache_control:
+                # asked to make public a private response...
+                # we strip cookies on public paths so we should be ok to ignore this
+                cache_control.delete('private')
+            if 'public' not in cache_control:
+                cache_control.append('public')
+            cache_control = ', '.join(cache_control)
+        else:
+            cache_control = 'public'
+        h['cache-control'] = cache_control
+    
+    def _force_min_expiration(self, time_in_seconds):
+        h = self._remote_response.headers
+        expires_at = self._determine_response_expiration_time(self._remote_response)
+        min_expires_at = int(time.time()) + time_in_seconds
+        if expires_at is None or expires_at < min_expires_at:
+            if h.has_key('cache-control'):
+                cache_control = [part.strip() for part in h['cache-control'].split(',')]
+                for part in cache_control:
+                    if part.startswith('max-age='):
+                        cache_control.remove(part)
+                        break
+            else:
+                cache_control = []
+            cache_control.append('max-age=%d' % time_in_seconds)
+            h['cache-control'] = ', '.join(cache_control)
+            if h.has_key('expires'):
+                del h['expires']
+    
+    def _determine_response_expiration_time(self, response):
+        h = response.headers
+        expires_at = None
+        # max-age takes precedence over expires
+        if h.has_key('cache-control'):
+            parts = [part.strip() for part in h['cache-control'].split(',')]
+            for part in parts:
+                if part.startswith('max-age='):
+                    age = int(part[8:])
+                    expires_at = int(time.time()) + age
+                    break
+        if expires_at is None and h.has_key('expires'):
+            expires_at = expires_to_timestamp(h['expires'])
+        return expires_at
 
 class ContentWrapper:
     def __init__(self, content):
@@ -134,17 +217,7 @@ class CachingProxy(Proxy):
             return
         
         headers = response.headers
-        expires_at = None
-        if headers.has_key('cache-control'):
-            cache_control = headers['cache-control']
-            parts = [part.strip() for part in cache_control.split(',')]
-            for part in parts:
-                if part.startswith('max-age='):
-                    age = int(part[8:])
-                    expires_at = int(time.time()) + age
-                    break
-        if expires_at is None and headers.has_key('expires'):
-            expires_at = expires_to_timestamp(headers['expires'])
+        expires_at = self._determine_response_expiration_time(response)
         if expires_at is not None:
             headers['x-expires-timestamp'] = expires_at
             dir = os.path.dirname(self.cache_absolute_path)

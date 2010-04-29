@@ -3,6 +3,9 @@ import cherrypy, urllib, urllib2, Cookie, cookielib, time, urlgrabber.keepalive
 class BaseParameters:
     def __init__(self):
         self.host = self.path = self.method = self.params = self.data = self.query_string = self.cookie = self.headers = None
+    
+    def clear_cookies(self):
+        self.cookie = None
 
 class BaseResponse:
     def __init__(self, **kwargs):
@@ -13,6 +16,9 @@ class BaseResponse:
         
         for key, value in kwargs.items():
             setattr(self, key, value)
+    
+    def clear_cookies(self):
+        self.cookies = cookielib.CookieJar()
 
 class BaseProxy:
     ParametersClass = BaseParameters
