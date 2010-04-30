@@ -30,7 +30,7 @@ class BaseProxy:
         def redirect_request(self, req, fp, code, msg, hdrs, newurl):
             return None
     
-    PASS_REMOTE_HEADERS = ('content-type', 'content-disposition', 'location', 'cache-control', 'pragma', 'expires')
+    PASS_REMOTE_HEADERS = ('content-type', 'content-disposition', 'location', 'cache-control', 'pragma', 'expires', 'vary')
     
     def __init__(self):
         self._create_opener()
